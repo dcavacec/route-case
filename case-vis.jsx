@@ -266,6 +266,137 @@ const CabinetVisualizer = () => {
     }
   };
 
+    const removePartition = (shelfId, partitionId) => {
+    setCabinet(prev => ({
+      ...prev,
+      shelves: prev.shelves.map(shelf => {
+        if (shelf.id === shelfId && shelf.partitions.length > 1) {
+          const partitionIndex = shelf.partitions.findIndex(p => p.id === partitionId);
+          const removedPartition = shelf.partitions[partitionIndex];
+          const newPartitions = shelf.partitions.filter(p => p.id !== partitionId);
+          
+          // Add the removed partition's width to the next partition (or previous if it's the last one)
+          if (partitionIndex < newPartitions.length) {
+            newPartitions[partitionIndex] = {
+              ...newPartitions[partitionIndex],
+              width: newPartitions[partitionIndex].width + removedPartition.width
+            };
+          } else if (partitionIndex > 0) {
+            newPartitions[partitionIndex - 1] = {
+              ...newPartitions[partitionIndex - 1],
+              width: newPartitions[partitionIndex - 1].width + removedPartition.width
+            };
+          }
+          
+          return { ...shelf, partitions: newPartitions };
+        }
+        return shelf;
+      })
+    }));
+    
+    // Clear selected partition if it was the one being removed
+    if (selectedPartition?.id === partitionId) {
+      setSelectedPartition(null);
+    }
+  };
+
+  const selectPartition = (partitionId, shelfId) => {
+    const partitionData = findPartitionById(partitionId);
+    if (partitionData) {
+      setSelectedPartition({
+        id: partitionId,
+        shelfId: shelfId,
+        width: partitionData.partition.width,
+        subdivisions: partitionData.partition.subdivisions || []
+      });
+    }
+  };
+
+  const addSubdivision = () => {
+    if (!selectedPartition) return;
+    
+    const partitionData = findPartitionById(selectedPartition.id);
+    if (partitionData) {
+      setCabinet(prev => ({
+        ...prev,
+        shelves: prev.shelves.map(shelf => {
+          if (shelf.id === partitionData.shelfId) {
+            return {
+              ...shelf,
+              partitions: shelf.partitions.map(partition => {
+                if (partition.id === selectedPartition.id) {
+                  const currentSubdivisions = partition.subdivisions || [];
+                  const availableWidth = partition.width - (currentSubdivisions.length + 1) * SLAT_WIDTH;
+                  const newSubdivisionWidth = Math.max(SLAT_WIDTH, availableWidth / (currentSubdivisions.length + 1));
+                  
+                  // Redistribute existing subdivisions
+                  const totalExistingWidth = currentSubdivisions.reduce((sum, w) => sum + w, 0);
+                  const remainingWidth = availableWidth - newSubdivisionWidth;
+                  const scaleFactor = remainingWidth / totalExistingWidth;
+                  
+                  const newSubdivisions = currentSubdivisions.map(w => Math.max(SLAT_WIDTH, w * scaleFactor));
+                  newSubdivisions.push(newSubdivisionWidth);
+                  
+                  return { ...partition, subdivisions: newSubdivisions };
+                }
+                return partition;
+              })
+            };
+          }
+          return shelf;
+        })
+      }));
+      
+      // Update selected partition
+      setSelectedPartition(prev => ({
+        ...prev,
+        subdivisions: [...(prev.subdivisions || []), newSubdivisionWidth]
+      }));
+    }
+  };
+
+  const removeSubdivision = (subdivisionIndex) => {
+    if (!selectedPartition) return;
+    
+    const partitionData = findPartitionById(selectedPartition.id);
+    if (partitionData) {
+      setCabinet(prev => ({
+        ...prev,
+        shelves: prev.shelves.map(shelf => {
+          if (shelf.id === partitionData.shelfId) {
+            return {
+              ...shelf,
+              partitions: shelf.partitions.map(partition => {
+                if (partition.id === selectedPartition.id) {
+                  const currentSubdivisions = partition.subdivisions || [];
+                  if (currentSubdivisions.length <= 1) return partition;
+                  
+                  const newSubdivisions = currentSubdivisions.filter((_, i) => i !== subdivisionIndex);
+                  
+                  // Redistribute the removed subdivision's width
+                  const removedWidth = currentSubdivisions[subdivisionIndex];
+                  const redistributePerSubdivision = removedWidth / newSubdivisions.length;
+                  const redistributedSubdivisions = newSubdivisions.map(w => w + redistributePerSubdivision);
+                  
+                  return { ...partition, subdivisions: redistributedSubdivisions };
+                }
+                return partition;
+              })
+            };
+          }
+          return shelf;
+        })
+      }));
+      
+      // Update selected partition
+      const newSubdivisions = selectedPartition.subdivisions.filter((_, i) => i !== subdivisionIndex);
+      setSelectedPartition(prev => ({
+        ...prev,
+        subdivisions: newSubdivisions
+      }));
+    }
+  };
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
       <div className="mb-8">
@@ -469,7 +600,136 @@ const CabinetVisualizer = () => {
                               stroke={selectedPartition?.id === partition.id ? "#3b82f6" : "transparent"}
                               strokeWidth="2"
                               strokeDasharray={selectedPartition?.id === partition.id ? "5,5" : "none"}
-                              className="cursor-pointer"
+                              className="cursor-  const removePartition = (shelfId, partitionId) => {
+    setCabinet(prev => ({
+      ...prev,
+      shelves: prev.shelves.map(shelf => {
+        if (shelf.id === shelfId && shelf.partitions.length > 1) {
+          const partitionIndex = shelf.partitions.findIndex(p => p.id === partitionId);
+          const removedPartition = shelf.partitions[partitionIndex];
+          const newPartitions = shelf.partitions.filter(p => p.id !== partitionId);
+          
+          // Add the removed partition's width to the next partition (or previous if it's the last one)
+          if (partitionIndex < newPartitions.length) {
+            newPartitions[partitionIndex] = {
+              ...newPartitions[partitionIndex],
+              width: newPartitions[partitionIndex].width + removedPartition.width
+            };
+          } else if (partitionIndex > 0) {
+            newPartitions[partitionIndex - 1] = {
+              ...newPartitions[partitionIndex - 1],
+              width: newPartitions[partitionIndex - 1].width + removedPartition.width
+            };
+          }
+          
+          return { ...shelf, partitions: newPartitions };
+        }
+        return shelf;
+      })
+    }));
+    
+    // Clear selected partition if it was the one being removed
+    if (selectedPartition?.id === partitionId) {
+      setSelectedPartition(null);
+    }
+  };
+
+  const selectPartition = (partitionId, shelfId) => {
+    const partitionData = findPartitionById(partitionId);
+    if (partitionData) {
+      setSelectedPartition({
+        id: partitionId,
+        shelfId: shelfId,
+        width: partitionData.partition.width,
+        subdivisions: partitionData.partition.subdivisions || []
+      });
+    }
+  };
+
+  const addSubdivision = () => {
+    if (!selectedPartition) return;
+    
+    const partitionData = findPartitionById(selectedPartition.id);
+    if (partitionData) {
+      setCabinet(prev => ({
+        ...prev,
+        shelves: prev.shelves.map(shelf => {
+          if (shelf.id === partitionData.shelfId) {
+            return {
+              ...shelf,
+              partitions: shelf.partitions.map(partition => {
+                if (partition.id === selectedPartition.id) {
+                  const currentSubdivisions = partition.subdivisions || [];
+                  const availableWidth = partition.width - (currentSubdivisions.length + 1) * SLAT_WIDTH;
+                  const newSubdivisionWidth = Math.max(SLAT_WIDTH, availableWidth / (currentSubdivisions.length + 1));
+                  
+                  // Redistribute existing subdivisions
+                  const totalExistingWidth = currentSubdivisions.reduce((sum, w) => sum + w, 0);
+                  const remainingWidth = availableWidth - newSubdivisionWidth;
+                  const scaleFactor = remainingWidth / totalExistingWidth;
+                  
+                  const newSubdivisions = currentSubdivisions.map(w => Math.max(SLAT_WIDTH, w * scaleFactor));
+                  newSubdivisions.push(newSubdivisionWidth);
+                  
+                  return { ...partition, subdivisions: newSubdivisions };
+                }
+                return partition;
+              })
+            };
+          }
+          return shelf;
+        })
+      }));
+      
+      // Update selected partition
+      setSelectedPartition(prev => ({
+        ...prev,
+        subdivisions: [...(prev.subdivisions || []), newSubdivisionWidth]
+      }));
+    }
+  };
+
+  const removeSubdivision = (subdivisionIndex) => {
+    if (!selectedPartition) return;
+    
+    const partitionData = findPartitionById(selectedPartition.id);
+    if (partitionData) {
+      setCabinet(prev => ({
+        ...prev,
+        shelves: prev.shelves.map(shelf => {
+          if (shelf.id === partitionData.shelfId) {
+            return {
+              ...shelf,
+              partitions: shelf.partitions.map(partition => {
+                if (partition.id === selectedPartition.id) {
+                  const currentSubdivisions = partition.subdivisions || [];
+                  if (currentSubdivisions.length <= 1) return partition;
+                  
+                  const newSubdivisions = currentSubdivisions.filter((_, i) => i !== subdivisionIndex);
+                  
+                  // Redistribute the removed subdivision's width
+                  const removedWidth = currentSubdivisions[subdivisionIndex];
+                  const redistributePerSubdivision = removedWidth / newSubdivisions.length;
+                  const redistributedSubdivisions = newSubdivisions.map(w => w + redistributePerSubdivision);
+                  
+                  return { ...partition, subdivisions: redistributedSubdivisions };
+                }
+                return partition;
+              })
+            };
+          }
+          return shelf;
+        })
+      }));
+      
+      // Update selected partition
+      const newSubdivisions = selectedPartition.subdivisions.filter((_, i) => i !== subdivisionIndex);
+      setSelectedPartition(prev => ({
+        ...prev,
+        subdivisions: newSubdivisions
+      }));
+    }
+  };pointer"
                               onClick={() => selectPartition(partition.id, shelf.id)}
                             />
                             
